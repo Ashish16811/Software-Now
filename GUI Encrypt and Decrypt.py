@@ -10,23 +10,19 @@ def encrypt_text(text, n, m):
     for char in text:
         if 'a' <= char <= 'm':
             shift = (n * m) % 26
-            new_code = (ord(char) - ord('a') + shift) % 26 + ord('a')
-            encrypted_text += chr(new_code)
+            encrypted_text += chr((ord(char) - ord('a') + shift) % 26 + ord('a'))
             metadata += "1"
         elif 'n' <= char <= 'z':
             shift = (n + m) % 26
-            new_code = (ord(char) - ord('a') - shift) % 26 + ord('a')
-            encrypted_text += chr(new_code)
+            encrypted_text += chr((ord(char) - ord('a') - shift) % 26 + ord('a'))
             metadata += "2"
         elif 'A' <= char <= 'M':
             shift = n % 26
-            new_code = (ord(char) - ord('A') - shift) % 26 + ord('A')
-            encrypted_text += chr(new_code)
+            encrypted_text += chr((ord(char) - ord('A') - shift) % 26 + ord('A'))
             metadata += "3"
         elif 'N' <= char <= 'Z':
             shift = (m ** 2) % 26
-            new_code = (ord(char) - ord('A') + shift) % 26 + ord('A')
-            encrypted_text += chr(new_code)
+            encrypted_text += chr((ord(char) - ord('A') + shift) % 26 + ord('A'))
             metadata += "4"
         else:
             encrypted_text += char
@@ -39,151 +35,193 @@ def decrypt_text(encrypted_text, metadata, n, m):
         category = metadata[i]
         if category == "1":
             shift = (n * m) % 26
-            original_code = (ord(char) - ord('a') - shift) % 26 + ord('a')
-            decrypted_text += chr(original_code)
+            decrypted_text += chr((ord(char) - ord('a') - shift) % 26 + ord('a'))
         elif category == "2":
             shift = (n + m) % 26
-            original_code = (ord(char) - ord('a') + shift) % 26 + ord('a')
-            decrypted_text += chr(original_code)
+            decrypted_text += chr((ord(char) - ord('a') + shift) % 26 + ord('a'))
         elif category == "3":
             shift = n % 26
-            original_code = (ord(char) - ord('A') + shift) % 26 + ord('A')
-            decrypted_text += chr(original_code)
+            decrypted_text += chr((ord(char) - ord('A') + shift) % 26 + ord('A'))
         elif category == "4":
             shift = (m ** 2) % 26
-            original_code = (ord(char) - ord('A') - shift) % 26 + ord('A')
-            decrypted_text += chr(original_code)
+            decrypted_text += chr((ord(char) - ord('A') - shift) % 26 + ord('A'))
         else:
             decrypted_text += char
     return decrypted_text
 
-def check_decryption(original_text, decrypted_text):
-    return original_text == decrypted_text
+def check_decryption(original, decrypted):
+    return original == decrypted
 
-def save_file(base_name, content, folder_path):
+def save_file(name, content, folder):
     counter = 0
     while True:
-        filename = f"{base_name}.txt" if counter == 0 else f"{base_name}{counter}.txt"
-        full_path = os.path.join(folder_path, filename)
-        if not os.path.exists(full_path):
-            with open(full_path, "w", encoding="utf-8") as f:
+        filename = f"{name}.txt" if counter == 0 else f"{name}{counter}.txt"
+        path = os.path.join(folder, filename)
+        if not os.path.exists(path):
+            with open(path, "w", encoding="utf-8") as f:
                 f.write(content)
-            return full_path
+            return path
         counter += 1
 
-# --- UI Functions ---
-def ask_file(entry_widget, title):
-    filepath = filedialog.askopenfilename(title=title, filetypes=[("Text Files", "*.txt")])
-    entry_widget.delete(0, tk.END)
-    entry_widget.insert(0, filepath)
+def open_file(filepath):
+    os.startfile(filepath)
+
+# --- GUI Functions ---
+def browse_file(entry_widget, title):
+    file_path = filedialog.askopenfilename(title=title, filetypes=[("Text Files", "*.txt")])
+    if file_path:
+        entry_widget.delete(0, tk.END)
+        entry_widget.insert(0, file_path)
 
 def update_ui(event=None):
-    file_frame.pack_forget()
-    metadata_frame.pack_forget()
-    verify_frame.pack_forget()
-    entry_file.delete(0, tk.END)
-    entry_metadata.delete(0, tk.END)
-    entry_original.delete(0, tk.END)
+    clear_frames()
+    view_frame.pack_forget()
+    start_frame.pack_forget()
 
-    if action_var.get() == "Encrypt":
-        file_frame.pack(pady=10)
-    elif action_var.get() == "Decrypt":
-        file_frame.pack(pady=10)
-        metadata_frame.pack(pady=10)
-    elif action_var.get() == "Verify Decryption":
-        file_frame.pack(pady=10)
-        verify_frame.pack(pady=10)
+    selected_action = action_var.get()
+    if selected_action == "Encrypt 🔒":
+        frame_encrypt.pack(pady=20)
+    elif selected_action == "Decrypt 🔓":
+        frame_decrypt.pack(pady=20)
+    elif selected_action == "Verify ✅":
+        frame_verify.pack(pady=20)
+    
+    view_frame.pack(pady=15)
+    start_frame.pack(pady=20)
+
+def clear_frames():
+    frame_encrypt.pack_forget()
+    frame_decrypt.pack_forget()
+    frame_verify.pack_forget()
 
 def process_action():
     action = action_var.get()
+    if action == "Select Action":
+        messagebox.showerror("Error ❌", "Please select a valid action first.")
+        return
+
     try:
         n = int(entry_n.get())
         m = int(entry_m.get())
     except ValueError:
-        messagebox.showerror("Error", "Please enter valid integers for n and m.")
+        messagebox.showerror("Error ❌", "Please enter valid integers for n and m.")
         return
 
-    filepath = entry_file.get().strip()
-    if not os.path.isfile(filepath):
-        messagebox.showerror("Error", "Please select a valid file!")
-        return
-
-    folder_path = os.path.dirname(filepath)
-
-    if action == "Encrypt":
-        with open(filepath, "r", encoding="utf-8") as file:
-            text = file.read()
+    if action == "Encrypt 🔒":
+        file_path = entry_encrypt_file.get().strip()
+        if not os.path.isfile(file_path):
+            messagebox.showerror("Error ❌", "Please select a valid text file!")
+            return
+        with open(file_path, "r", encoding="utf-8") as f:
+            text = f.read()
         encrypted_text, metadata = encrypt_text(text, n, m)
-        save_file("encrypted_text", encrypted_text, folder_path)
-        save_file("encryption_metadata", metadata, folder_path)
-        messagebox.showinfo("Success", "✅ Encryption completed!")
+        folder = os.path.dirname(file_path)
+        encrypted_path = save_file("encrypted_text", encrypted_text, folder)
+        metadata_path = save_file("encryption_metadata", metadata, folder)
+        messagebox.showinfo("Done ✅", "Encryption Completed!")
+        show_view_buttons([encrypted_path, metadata_path])
 
-    elif action == "Decrypt":
-        metadata_path = entry_metadata.get().strip()
-        if not os.path.isfile(metadata_path):
-            messagebox.showerror("Error", "Please select a valid metadata file!")
+    elif action == "Decrypt 🔓":
+        encrypted_path = entry_decrypt_text.get().strip()
+        metadata_path = entry_decrypt_metadata.get().strip()
+        if not os.path.isfile(encrypted_path) or not os.path.isfile(metadata_path):
+            messagebox.showerror("Error ❌", "Please select valid files!")
             return
-        with open(filepath, "r", encoding="utf-8") as file:
-            encrypted_text = file.read()
-        with open(metadata_path, "r", encoding="utf-8") as file:
-            metadata = file.read()
+        with open(encrypted_path, "r", encoding="utf-8") as f:
+            encrypted_text = f.read()
+        with open(metadata_path, "r", encoding="utf-8") as f:
+            metadata = f.read()
         decrypted_text = decrypt_text(encrypted_text, metadata, n, m)
-        save_file("decrypted_text", decrypted_text, folder_path)
-        messagebox.showinfo("Success", "✅ Decryption completed!")
+        folder = os.path.dirname(encrypted_path)
+        decrypted_path = save_file("decrypted_text", decrypted_text, folder)
+        messagebox.showinfo("Done ✅", "Decryption Completed!")
+        show_view_buttons([decrypted_path])
 
-    elif action == "Verify Decryption":
-        original_path = entry_original.get().strip()
-        if not os.path.isfile(original_path):
-            messagebox.showerror("Error", "Please select a valid original file!")
+    elif action == "Verify ✅":
+        original_path = entry_verify_original.get().strip()
+        decrypted_path = entry_verify_decrypted.get().strip()
+        if not os.path.isfile(original_path) or not os.path.isfile(decrypted_path):
+            messagebox.showerror("Error ❌", "Please select valid files!")
             return
-        with open(filepath, "r", encoding="utf-8") as file:
-            decrypted_text = file.read()
-        with open(original_path, "r", encoding="utf-8") as file:
-            original_text = file.read()
+        with open(original_path, "r", encoding="utf-8") as f:
+            original_text = f.read()
+        with open(decrypted_path, "r", encoding="utf-8") as f:
+            decrypted_text = f.read()
         if check_decryption(original_text, decrypted_text):
-            messagebox.showinfo("Verification", "✅ Verification successful: Texts match!")
+            messagebox.showinfo("Verification ✅", "Texts Match Successfully!")
         else:
-            messagebox.showerror("Verification", "❌ Verification failed: Texts do not match.")
+            messagebox.showerror("Verification ❌", "Texts Do NOT Match!")
+
+def show_view_buttons(filepaths):
+    for widget in view_frame.winfo_children():
+        widget.destroy()
+    view_frame.pack(pady=15)
+    for filepath in filepaths:
+        filename = os.path.basename(filepath)
+        tk.Button(view_frame, text=f"📂 View {filename}", font=("Helvetica", 14, "bold"), bg="#34d399",
+                  command=lambda path=filepath: open_file(path)).pack(pady=5)
+    start_frame.pack(pady=20)
 
 # --- GUI Setup ---
 root = tk.Tk()
-root.title("Encryptor and Decryptor 🔐")
-root.geometry("650x600")
-root.configure(bg="#dbeafe")
+root.title("Encryptor & Decryptor App 🔐")
+root.geometry("650x750")  # 🔥 made window smaller
+root.configure(bg="#e0f2fe")
 
-label_title = tk.Label(root, text="Encryptor and Decryptor 🔒", font=("Helvetica", 26, "bold"), bg="#dbeafe")
-label_title.pack(pady=20)
+# Title
+tk.Label(root, text="Encryptor & Decryptor 🔒", font=("Helvetica", 28, "bold"), bg="#e0f2fe").pack(pady=20)
 
-action_var = tk.StringVar(value="Select Action")
-action_menu = ttk.Combobox(root, textvariable=action_var, values=["Encrypt", "Decrypt", "Verify Decryption"], font=("Helvetica", 14), state="readonly")
-action_menu.pack(pady=10)
+# Action Dropdown
+action_var = tk.StringVar(value="Select Action")  # 🔥 default text
+action_menu = ttk.Combobox(root, textvariable=action_var, font=("Helvetica", 22), state="readonly",
+                           values=["Encrypt 🔒", "Decrypt 🔓", "Verify ✅"], width=20, justify="center")
+action_menu.pack(pady=20)
 action_menu.bind("<<ComboboxSelected>>", update_ui)
 
-frame_nm = tk.Frame(root, bg="#dbeafe")
-frame_nm.pack(pady=10)
-entry_n = tk.Entry(frame_nm, width=15, font=("Helvetica", 14))
+# N and M Inputs
+frame_nm = tk.Frame(root, bg="#e0f2fe")
+frame_nm.pack(pady=15)
+entry_n = tk.Entry(frame_nm, font=("Helvetica", 18), width=10, justify="center")
 entry_n.grid(row=0, column=0, padx=10)
 entry_n.insert(0, "n")
-entry_m = tk.Entry(frame_nm, width=15, font=("Helvetica", 14))
+entry_m = tk.Entry(frame_nm, font=("Helvetica", 18), width=10, justify="center")
 entry_m.grid(row=0, column=1, padx=10)
 entry_m.insert(0, "m")
 
-file_frame = tk.Frame(root, bg="#dbeafe")
-entry_file = tk.Entry(file_frame, width=40, font=("Helvetica", 12))
-entry_file.pack(side="left", padx=5)
-tk.Button(file_frame, text="Browse File", command=lambda: ask_file(entry_file, "Select File"), font=("Helvetica", 11)).pack(side="left", padx=5)
+# Frames for each action
+frame_encrypt = tk.Frame(root, bg="#e0f2fe")
+entry_encrypt_file = tk.Entry(frame_encrypt, width=40, font=("Helvetica", 16), justify="center")
+entry_encrypt_file.pack(pady=5)
+tk.Button(frame_encrypt, text="📄 Browse Text File", font=("Helvetica", 14),
+          command=lambda: browse_file(entry_encrypt_file, "Select Text File")).pack(pady=5)
 
-metadata_frame = tk.Frame(root, bg="#dbeafe")
-entry_metadata = tk.Entry(metadata_frame, width=35, font=("Helvetica", 12))
-entry_metadata.pack(side="left", padx=5)
-tk.Button(metadata_frame, text="Browse Metadata", command=lambda: ask_file(entry_metadata, "Select Metadata File"), font=("Helvetica", 11)).pack(side="left", padx=5)
+frame_decrypt = tk.Frame(root, bg="#e0f2fe")
+entry_decrypt_text = tk.Entry(frame_decrypt, width=40, font=("Helvetica", 16), justify="center")
+entry_decrypt_text.pack(pady=5)
+tk.Button(frame_decrypt, text="📄 Browse Encrypted File", font=("Helvetica", 14),
+          command=lambda: browse_file(entry_decrypt_text, "Select Encrypted File")).pack(pady=5)
+entry_decrypt_metadata = tk.Entry(frame_decrypt, width=40, font=("Helvetica", 16), justify="center")
+entry_decrypt_metadata.pack(pady=5)
+tk.Button(frame_decrypt, text="📜 Browse Metadata File", font=("Helvetica", 14),
+          command=lambda: browse_file(entry_decrypt_metadata, "Select Metadata File")).pack(pady=5)
 
-verify_frame = tk.Frame(root, bg="#dbeafe")
-entry_original = tk.Entry(verify_frame, width=35, font=("Helvetica", 12))
-entry_original.pack(side="left", padx=5)
-tk.Button(verify_frame, text="Browse Original", command=lambda: ask_file(entry_original, "Select Original File"), font=("Helvetica", 11)).pack(side="left", padx=5)
+frame_verify = tk.Frame(root, bg="#e0f2fe")
+entry_verify_original = tk.Entry(frame_verify, width=40, font=("Helvetica", 16), justify="center")
+entry_verify_original.pack(pady=5)
+tk.Button(frame_verify, text="📄 Browse Original Text", font=("Helvetica", 14),
+          command=lambda: browse_file(entry_verify_original, "Select Original File")).pack(pady=5)
+entry_verify_decrypted = tk.Entry(frame_verify, width=40, font=("Helvetica", 16), justify="center")
+entry_verify_decrypted.pack(pady=5)
+tk.Button(frame_verify, text="📜 Browse Decrypted Text", font=("Helvetica", 14),
+          command=lambda: browse_file(entry_verify_decrypted, "Select Decrypted File")).pack(pady=5)
 
-btn_start = tk.Button(root, text="🚀 Start", command=process_action, font=("Helvetica", 16, "bold"), bg="#2563eb", fg="white", padx=25, pady=10)
-btn_start.pack(side="bottom", pady=30)
+# View Buttons Frame
+view_frame = tk.Frame(root, bg="#e0f2fe")
+
+# Start Button Frame
+start_frame = tk.Frame(root, bg="#e0f2fe")
+start_button = tk.Button(start_frame, text="🚀 Start", font=("Helvetica", 20, "bold"), bg="#2563eb", fg="white",
+                         command=process_action)
+start_button.pack(pady=10)
 
 root.mainloop()
